@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PurpleBot with Free Web Search Answers</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet" />
+<style>
+  /* ... similar styling as before for purple theme and chat UI */
+  body {
+    background: linear-gradient(135deg, #6d2ff6, #743adf, #a4508b);
+    font-family: 'Montserrat', sans-serif;
+    margin: 0; padding: 0; height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .chat-container {
+    width: 420px; max-width: 90vw; height: 600px;
+    background: rgba(40, 0, 60, 0.95);
+    border-radius: 20px; display: flex; flex-direction: column;
+    box-shadow: 0 2px 30px #38184c88;
+  }
+  .chat-header {
+    background: linear-gradient(90deg, #9c27b0, #6d2ff6);
+    padding: 24px 20px;
+    font-weight: 700; font-size: 1.8rem; color: white;
+    border-bottom: 2px solid #8445e6;
+  }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px 14px;
+    background: linear-gradient(120deg, #4322b877 30%, #ab41b566 100%);
+    color: #fff; font-size: 1rem; line-height: 1.5;
+  }
+  .msg { margin-bottom: 16px; max-width: 80%; padding: 12px 18px; border-radius: 22px; }
+  .msg.user {
+    background: linear-gradient(90deg, #a44fdc, #725be4);
+    align-self: flex-end; color: #fff;
+    border-bottom-right-radius: 8px;
+  }
+  .msg.bot {
+    background: linear-gradient(100deg, #3c1978, #7538e4, #ab41b5);
+    border-bottom-left-radius: 8px;
+  }
+  form {
+    display: flex; padding: 16px;
+    border-top: 2px solid #502083;
+    background: rgba(0, 0, 0, 0.25);
+  }
+  input#user-input {
+    border-radius: 25px;
+    border: 1.3px solid #8445e6;
+    background: rgba(254, 254, 255, 0.1);
+    color: #faf6fa;
+    flex: 1; font-size: 1rem; padding: 12px 18px;
+    outline: none; transition: border-color 0.25s ease;
+  }
+  input#user-input:focus {
+    border-color: #ca7af0;
+  }
+  button {
+    margin-left: 10px;
+    background: linear-gradient(95deg, #915fad, #bc61fa);
+    border: none; color: white; font-size: 1.4rem;
+    width: 44px; height: 44px;
+    border-radius: 50%; cursor: pointer;
+    box-shadow: 0 4px 10px #52026288;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s ease;
+  }
+  button:hover {
+    transform: scale(1.1);
+  }
+</style>
+</head>
+<body>
+<div class="chat-container">
+  <div class="chat-header">🤖 PurpleBot</div>
+  <div id="messages" class="chat-messages"></div>
+  <form id="chat-form" autocomplete="off">
+    <input id="user-input" type="text" placeholder="Ask me anything or search the web..." required autofocus />
+    <button type="submit" aria-label="Send">&#10148;</button>
+  </form>
+</div>
+
+<script>
+  const messagesEl = document.getElementById('messages');
+  const form = document.getElementById('chat-form');
+  const inputEl = document.getElementById('user-input');
+
+  function addMessage(text, sender = 'bot', isHTML = false) {
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + sender;
+    if(isHTML) {
+      msg.innerHTML = text;
+    } else {
+      msg.textContent = text;
+    }
+    messagesEl.appendChild(msg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  // Initial greeting
+  window.onload = () => {
+    addMessage("Hi! 👋 I'm PurpleBot. Type any question or start with 'search:' followed by your query.", true);
+  };
+
+  async function searchDuckDuckGo(query) {
+    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&no_html=1`;
+    try {
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if(data.AbstractText) {
+        return data.AbstractText;
+      }
+      if(data.RelatedTopics && data.RelatedTopics.length > 0 && data.RelatedTopics[0].Text) {
+        return data.RelatedTopics[0].Text;
+      }
+      return "I couldn't find anything relevant.";
+    } catch {
+      return "Oops! Something went wrong searching the web.";
+    }
+  }
+
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const userInput = inputEl.value.trim();
+    if(!userInput) return;
+    addMessage(userInput, 'user');
+    inputEl.value = "";
+
+    // If user starts with 'search: query', do web search
+    if(userInput.toLowerCase().startsWith('search:')) {
+      addMessage("🔍 Searching the web...", 'bot');
+      const query = userInput.slice(7).trim();
+      const result = await searchDuckDuckGo(query);
+      addMessage(result, 'bot');
+      return;
+    }
+
+    // Basic FAQ fallback
+    const lower = userInput.toLowerCase();
+    if(["hi","hello","hey"].includes(lower)) {
+      addMessage("Hello! How can I assist you today?", 'bot');
+    } else if(lower.includes("your name")) {
+      addMessage("I'm PurpleBot, your purple-themed chatbot!", 'bot');
+    } else if(lower.includes("bye") || lower.includes("goodbye")) {
+      addMessage("Goodbye! Have a nice day!", 'bot');
+    } else {
+      addMessage("Sorry, I can only do simple greetings or web search when you prefix with 'search:'.", 'bot');
+    }
+  }
+</script>
+</body>
+</html>
